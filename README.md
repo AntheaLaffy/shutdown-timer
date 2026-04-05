@@ -13,6 +13,7 @@ A modern, customizable desktop shutdown timer with extensive theming capabilitie
 ## ✨ Features
 
 ### 🎯 Core Timer Functionality
+
 - **Countdown Mode**: Set hours/minutes/seconds until shutdown
 - **Schedule Mode**: Schedule shutdown at specific time of day
 - **Ringtone Support**: Custom audio alerts before shutdown
@@ -20,9 +21,10 @@ A modern, customizable desktop shutdown timer with extensive theming capabilitie
 - **Safety Features**: Cancel anytime, warning notifications
 
 ### 🎨 Advanced Theming System
+
 - **10+ Preset Themes**: Professional designs including:
-  - Cyberpunk Rewrite (modern neon)
-  - Fresh Rewrite (clean light)  
+  - Cyberpunk (neon cyan/magenta)
+  - Fresh (mint green)
   - Ocean Blue, Forest Green, Sunset Orange
   - Elegant Purple, Midnight Dark, Solarized Light
   - Monochrome, Retro 80s
@@ -31,6 +33,7 @@ A modern, customizable desktop shutdown timer with extensive theming capabilitie
 - **Export/Import**: Share themes via JSON files
 
 ### 🖌️ Visual Customization
+
 - **Color System**: Adjust 12+ semantic color variables
 - **Font Selection**: Choose from 50+ curated Google Fonts
 - **Layout Controls**: Fine-tune spacing, border radius, shadows
@@ -38,11 +41,13 @@ A modern, customizable desktop shutdown timer with extensive theming capabilitie
 - **Typography**: Separate font selection for headings, body, mono, and accents
 
 ### 🌐 Internationalization
+
 - **Three Languages**: Chinese (简体中文), English, Japanese (日本語)
 - **Dynamic Switching**: Change language without restarting
 - **Complete UI Coverage**: All interface elements translated
 
 ### 🧭 Modern UI/UX
+
 - **Sidebar Navigation**: Organized 3-page layout (Timer, Settings, Appearance)
 - **Smooth Animations**: Subtle fade/slide transitions between pages
 - **Responsive Design**: Desktop-optimized with mobile considerations
@@ -51,6 +56,7 @@ A modern, customizable desktop shutdown timer with extensive theming capabilitie
 ## 📸 Screenshots
 
 ### Timer Page
+
 ```
 ┌─────────────────────────────────────────────┐
 │  ⚙️ Shutdown Timer                     [─][□][×]│
@@ -84,6 +90,7 @@ A modern, customizable desktop shutdown timer with extensive theming capabilitie
 ```
 
 ### Appearance Customization
+
 - **Colors Tab**: Adjust all theme colors with live preview
 - **Fonts Tab**: Browse 50+ fonts with search and categories
 - **Layout Tab**: Fine-tune spacing, borders, and shadows
@@ -93,11 +100,13 @@ A modern, customizable desktop shutdown timer with extensive theming capabilitie
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - [Node.js](https://nodejs.org/) 18+ and npm
 - [Rust](https://www.rust-lang.org/) (for Tauri backend)
-- [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites)
+- [Tauri CLI](https://tauri.app/v2/guides/getting-started/prerequisites)
 
 ### Installation
+
 ```bash
 # Clone the repository
 git clone <repository-url>
@@ -113,6 +122,7 @@ cargo build
 ```
 
 ### Development
+
 ```bash
 # From the src directory
 npm run dev
@@ -122,6 +132,7 @@ npm run tauri dev
 ```
 
 ### Building
+
 ```bash
 # Development build
 npm run build
@@ -133,6 +144,7 @@ npm run tauri build
 ## 📖 Usage Guide
 
 ### Setting a Timer
+
 1. **Open the application**
 2. **Select Timer page** from sidebar
 3. **Choose mode**:
@@ -146,6 +158,7 @@ npm run tauri build
 6. **Click "Start Countdown"** or "Set Schedule"
 
 ### Customizing Appearance
+
 1. **Navigate to Appearance page** from sidebar
 2. **Explore tabs**:
    - **Colors**: Adjust all theme colors
@@ -157,6 +170,7 @@ npm run tauri build
 4. **Export/import themes** to share with others
 
 ### Managing Settings
+
 1. **Navigate to Settings page** from sidebar
 2. **Change language** between Chinese, English, or Japanese
 3. **Adjust system preferences**
@@ -165,12 +179,13 @@ npm run tauri build
 ## 🎨 Theme System
 
 ### Preset Themes
+
 The application includes 10 professionally designed themes:
 
 | Theme | Description | Category |
 |-------|-------------|----------|
-| **Fresh Rewrite** | Clean, light theme with soft green accents | Light |
-| **Cyberpunk Rewrite** | Futuristic dark theme with neon cyan/magenta | Dark/Neon |
+| **Fresh** | Clean, mint green with soft green accents | Light |
+| **Cyberpunk** | Futuristic dark theme with neon cyan/magenta | Dark/Neon |
 | **Ocean Blue** | Calm aquatic color scheme | Professional |
 | **Forest Green** | Natural, earthy tones | Nature |
 | **Sunset Orange** | Warm, sunset-inspired palette | Warm |
@@ -181,6 +196,7 @@ The application includes 10 professionally designed themes:
 | **Retro 80s** | Vibrant, nostalgic color scheme | Retro |
 
 ### Creating Custom Themes
+
 1. **Start from a preset** or current customization
 2. **Adjust colors**, fonts, and layout to your preference
 3. **Click "Save Theme"** in the Themes tab
@@ -188,7 +204,9 @@ The application includes 10 professionally designed themes:
 5. **Export as JSON** to share with others
 
 ### Theme File Format
+
 Custom themes are saved as JSON files with the following structure:
+
 ```json
 {
   "id": "custom-theme-id",
@@ -216,6 +234,7 @@ Custom themes are saved as JSON files with the following structure:
 ## 🏗️ Technical Architecture
 
 ### Frontend Stack
+
 - **TypeScript**: Type-safe JavaScript with modern features
 - **Tailwind CSS v4**: Utility-first CSS framework with JIT compilation
 - **Vite**: Fast build tool and development server
@@ -223,11 +242,13 @@ Custom themes are saved as JSON files with the following structure:
 - **CSS Custom Properties**: Dynamic theming system
 
 ### Backend Stack
+
 - **Tauri 2**: Secure, lightweight desktop application framework
 - **Rust**: Systems programming for native performance
 - **Windows API**: System integration for shutdown, tray, notifications
 
 ### Project Structure
+
 ```
 shutdown-timer/
 ├── src/                    # Frontend source code
@@ -252,10 +273,11 @@ shutdown-timer/
 │   ├── src/             # Rust source code
 │   ├── Cargo.toml       # Rust dependencies
 │   └── tauri.conf.json  # Tauri configuration
-└── readme.md            # This file
+└── README.md            # This file
 ```
 
 ### CSS Architecture
+
 The application uses a systematic CSS variable naming convention:
 
 ```css
@@ -276,6 +298,7 @@ The application uses a systematic CSS variable naming convention:
 ## 🛠️ Development Guide
 
 ### Setting Up Development Environment
+
 ```bash
 # 1. Install Node.js and npm
 # 2. Install Rust and Cargo
@@ -288,6 +311,7 @@ npm install
 ```
 
 ### Running Tests
+
 ```bash
 # From src directory
 npm test
@@ -300,12 +324,14 @@ npm run test:coverage
 ```
 
 ### Code Quality
+
 - **TypeScript**: Strict mode enabled, no implicit any
 - **ESLint**: Code style and best practices
 - **Prettier**: Consistent code formatting
 - **Vitest**: Comprehensive test coverage
 
 ### Adding New Themes
+
 1. **Edit `src/data/preset-themes.ts`**
 2. **Add new theme object** following the `PresetTheme` interface
 3. **Define color palette**, typography, and layout
@@ -313,6 +339,7 @@ npm run test:coverage
 5. **Ensure accessibility** (WCAG contrast compliance)
 
 ### Adding New Fonts
+
 1. **Edit `src/data/fonts.ts`**
 2. **Add font object** with name, category, and weights
 3. **Update FontSelector component** if adding new category
@@ -328,6 +355,7 @@ Contributions are welcome! Here's how you can help:
 4. **Improve documentation** or translations
 
 ### Development Workflow
+
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit changes (`git commit -m 'Add amazing feature'`)
@@ -348,7 +376,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/shutdown-timer/issues)
+- **Issues**: [GitHub Issues](https://github.com/AntheaLaffy/shutdown-timer/issues)
 - **Documentation**: This README and code comments
 - **Community**: Discussions and pull requests
 
@@ -356,4 +384,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for desktop automation enthusiasts**
 
-*Last updated: April 2024 | Version: 0.1.0*
+*Last updated: April 2026 | Version: 0.1.0*
