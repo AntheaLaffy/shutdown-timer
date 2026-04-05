@@ -6,7 +6,7 @@
 [![Vite](https://img.shields.io/badge/Vite-5.0+-646CFF.svg)](https://vitejs.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-一个现代化、可定制的桌面关机定时器，支持倒计时/定时关机、丰富的主题系统、多语言切换和专业级 UI/UX 设计。
+一个现代化、可定制的桌面关机定时器，支持倒计时/定时关机、统一配置文件持久化、丰富的主题系统、多语言切换和专业级 UI/UX 设计。
 
 > ✨ **全新改版**：从紧凑的竖版布局升级为现代化的侧边栏应用，支持完整的视觉定制功能。
 
@@ -17,7 +17,13 @@
 - **定时模式**：设置具体时间点关机
 - **铃声提醒**：关机前播放自定义音频警报
 - **系统集成**：阻止休眠、最小化到托盘、开机自启
-- **安全功能**：随时取消、警告通知
+- **安全功能**：随时取消、关机前 60 秒预警通知
+
+### 🧱 配置与状态管理
+- **统一配置文件**：由 Rust 后端维护版本化 JSON 配置文件
+- **单一真实来源**：前端页面统一从应用 store 读取配置和运行态
+- **任务恢复**：应用重启后自动恢复活动中的关机任务状态
+- **兼容迁移**：首次启动会迁移旧版 `localStorage` 配置
 
 ### 🎨 高级主题系统
 - **10+ 预设主题**：专业设计方案，包括：
@@ -94,6 +100,18 @@
 - **布局选项卡**：精细调整间距、边框、阴影
 - **背景选项卡**：上传图片并调整透明度
 - **主题选项卡**：浏览预设主题和管理自定义主题
+
+## ✅ 当前实现状态
+
+以下能力已经在当前代码中接通：
+
+- 统一配置文件读写与旧版配置迁移
+- 倒计时与定时模式的后端统一关机调度
+- 运行中任务的持久化恢复
+- 关机前事件通知与铃声预览/播放接口
+- 托盘关闭策略与开机自启偏好同步
+- 外观页五个标签页的可用编辑能力
+- 自定义主题的保存、导入、导出、重命名、删除
 
 ## 🚀 快速开始
 
@@ -237,26 +255,22 @@ npm run tauri build
 shutdown-timer/
 ├── src/                    # 前端源代码
 │   ├── components/        # 可复用 UI 组件
-│   │   ├── ColorPicker.tsx
-│   │   ├── FontSelector.tsx
-│   │   ├── Sidebar.ts
-│   │   └── ...
-│   ├── pages/            # 主应用页面
-│   │   ├── TimerPage     # 原始定时器功能
-│   │   ├── SettingsPage  # 语言和偏好设置
-│   │   └── AppearancePage # 视觉定制
-│   ├── types/            # TypeScript 类型定义
-│   ├── data/             # 静态数据（字体、主题）
-│   ├── utils/            # 工具函数
-│   ├── __tests__/        # 测试套件
-│   ├── app.ts            # 主应用逻辑
-│   ├── i18n.ts           # 国际化
-│   ├── styles.css        # Tailwind + CSS 变量
-│   └── index.html        # 应用外壳
+│   ├── pages/             # 主应用页面
+│   ├── store/             # 集中式状态管理
+│   ├── types/             # TypeScript 类型定义
+│   ├── data/              # 静态数据（字体、主题）
+│   ├── App.tsx            # 主应用逻辑
+│   ├── i18n.ts            # 国际化
+│   ├── styles.css         # 动态主题与页面样式
+│   └── index.html         # 应用外壳
 ├── src-tauri/            # Tauri 后端
-│   ├── src/             # Rust 源代码
-│   ├── Cargo.toml       # Rust 依赖
-│   └── tauri.conf.json  # Tauri 配置
+│   ├── src/              # Rust 源代码
+│   │   ├── config.rs     # 配置文件与运行态管理
+│   │   ├── shutdown.rs   # 关机与开机自启
+│   │   ├── sleep.rs      # 防休眠控制
+│   │   └── audio.rs      # 铃声播放
+│   ├── Cargo.toml        # Rust 依赖
+│   └── tauri.conf.json   # Tauri 配置
 └── README.md            # 本文件
 ```
 
@@ -294,21 +308,18 @@ npm install
 
 ### 运行测试
 ```bash
-# 在 src 目录运行
-npm test
+# 前端构建验证
+npm.cmd run build
 
-# 监听模式
-npm run test:watch
-
-# 覆盖率报告
-npm run test:coverage
+# Rust 后端检查
+cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
-### 代码质量
-- **TypeScript**：严格模式启用，无隐式 any
-- **ESLint**：代码风格和最佳实践
-- **Prettier**：一致的代码格式化
-- **Vitest**：全面的测试覆盖
+### 当前验证方式
+- **TypeScript**：构建期间执行类型检查
+- **Vite**：产物构建验证
+- **Cargo**：后端编译检查
+- **人工 QA**：建议在真实 Windows 环境补做系统级联调
 
 ### 添加新主题
 1. **编辑 `src/data/preset-themes.ts`**

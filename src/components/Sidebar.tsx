@@ -1,71 +1,63 @@
-import { t, type Lang } from '../i18n';
-import { PresetTheme } from '../types/theme';
+import { t } from '../i18n';
+import { useAppStore } from '../store/AppStore';
 
-type Page = 'timer' | 'settings' | 'appearance';
+export default function Sidebar() {
+  const {
+    currentPage,
+    setCurrentPage,
+    resolvedTheme,
+    customThemes,
+    presetThemes,
+    lang,
+    selectTheme,
+  } = useAppStore();
 
-interface SidebarProps {
-  currentPage: Page;
-  onPageChange: (page: Page) => void;
-  themes: PresetTheme[];
-  currentTheme: PresetTheme | null;
-  onThemeChange: (theme: PresetTheme) => void;
-  lang: Lang;
-}
+  const themes = [...presetThemes, ...customThemes];
 
-export default function Sidebar({
-  currentPage,
-  onPageChange,
-  themes,
-  currentTheme,
-  onThemeChange,
-  lang,
-}: SidebarProps) {
   return (
     <aside className="sidebar">
+      <div className="brand-mark">
+        <div className="brand-kicker">desktop utility</div>
+        <div className="brand-title">{t('app.title', lang)}</div>
+      </div>
+
       <nav className="sidebar-nav">
         <button
           className={`sidebar-item ${currentPage === 'timer' ? 'active' : ''}`}
-          onClick={() => onPageChange('timer')}
+          onClick={() => setCurrentPage('timer')}
         >
           <span>⏱</span>
           <span>{t('nav.timer', lang)}</span>
         </button>
         <button
           className={`sidebar-item ${currentPage === 'settings' ? 'active' : ''}`}
-          onClick={() => onPageChange('settings')}
+          onClick={() => setCurrentPage('settings')}
         >
           <span>⚙</span>
           <span>{t('nav.settings', lang)}</span>
         </button>
         <button
           className={`sidebar-item ${currentPage === 'appearance' ? 'active' : ''}`}
-          onClick={() => onPageChange('appearance')}
+          onClick={() => setCurrentPage('appearance')}
         >
           <span>🎨</span>
           <span>{t('nav.appearance', lang)}</span>
         </button>
+        <button
+          className={`sidebar-item ${currentPage === 'logs' ? 'active' : ''}`}
+          onClick={() => setCurrentPage('logs')}
+        >
+          <span>🧾</span>
+          <span>{t('nav.logs', lang)}</span>
+        </button>
       </nav>
 
       <div className="sidebar-footer">
-        <div style={{ padding: '8px 16px', fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
-          {currentTheme?.name || 'Theme'}
-        </div>
+        <div className="footer-label">{resolvedTheme?.name ?? 'Theme'}</div>
         <select
-          value={currentTheme?.id || ''}
-          onChange={(e) => {
-            const theme = themes.find((t) => t.id === e.target.value);
-            if (theme) onThemeChange(theme);
-          }}
-          style={{
-            width: '100%',
-            padding: '8px 12px',
-            fontSize: '0.85rem',
-            backgroundColor: 'var(--color-bg-tertiary)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--border-radius, 8px)',
-            color: 'var(--color-text-primary)',
-            cursor: 'pointer',
-          }}
+          className="theme-select"
+          value={resolvedTheme?.id ?? ''}
+          onChange={(event) => void selectTheme(event.target.value)}
         >
           {themes.map((theme) => (
             <option key={theme.id} value={theme.id}>

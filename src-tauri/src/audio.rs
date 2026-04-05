@@ -1,6 +1,16 @@
+use rodio::{Decoder, OutputStream, Sink};
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::io::BufReader;
+use std::{
+    fs::File,
+    io::BufReader,
+    path::Path,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        OnceLock,
+    },
+    thread,
+    time::Duration,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AudioResult {
@@ -8,36 +18,49 @@ pub struct AudioResult {
     pub message: String,
 }
 
-static PLAYING: AtomicBool = AtomicBool::new(false);
+static PLAYBACK_REVISION: OnceLock<AtomicU64> = OnceLock::new();
 
-/// Play an audio file (supports WAV, FLAC, MP3, OGG, etc.)
-#[tauri::command]
-pub fn play_ringtone(path: String) -> Result<AudioResult, String> {
-    log::info!("Play ringtone: {}", path);
+fn playback_revision() -> &'static AtomicU64 {
+    PLAYBACK_REVISION.get_or_init(|| AtomicU64::new(0))
+}
 
+pub fn play_ringtone_internal(path: &str) -> Result<AudioResult, String> {
     #[cfg(windows)]
     {
-        // Check if file exists
-        if !std::path::Path::new(&path).exists() {
+        if !Path::new(path).exists() {
             return Err(format!("File not found: {}", path));
         }
 
-        // Stop any currently playing audio first
-        let _ = stop_ringtone_internal();
+        let revision = playback_revision().fetch_add(1, Ordering::SeqCst) + 1;
+        let selected_path = path.to_string();
 
-        // Clone path for the thread
-        let path_for_thread = path.clone();
+        thread::spawn(move || {
+            let Ok((_stream, stream_handle)) = OutputStream::try_default() else {
+                return;
+            };
+            let Ok(sink) = Sink::try_new(&stream_handle) else {
+                return;
+            };
+            let Ok(file) = File::open(&selected_path) else {
+                return;
+            };
+            let Ok(source) = Decoder::new(BufReader::new(file)) else {
+                return;
+            };
+            sink.append(source);
 
-        // Play in a separate thread
-        std::thread::spawn(move || {
-            if let Err(e) = play_audio_file(&path_for_thread) {
-                log::error!("Failed to play audio: {}", e);
+            loop {
+                if playback_revision().load(Ordering::SeqCst) != revision {
+                    sink.stop();
+                    break;
+                }
+                if sink.empty() {
+                    break;
+                }
+                thread::sleep(Duration::from_millis(250));
             }
         });
 
-        PLAYING.store(true, Ordering::SeqCst);
-
-        log::info!("Playing ringtone: {}", path);
         Ok(AudioResult {
             success: true,
             message: format!("Playing: {}", path),
@@ -50,44 +73,11 @@ pub fn play_ringtone(path: String) -> Result<AudioResult, String> {
     }
 }
 
-#[cfg(windows)]
-fn play_audio_file(path: &str) -> Result<(), String> {
-    use rodio::{Decoder, OutputStream, Sink};
-
-    let (_stream, stream_handle) = OutputStream::try_default()
-        .map_err(|e| format!("Failed to open audio output: {}", e))?;
-
-    let file = std::fs::File::open(path)
-        .map_err(|e| format!("Failed to open file: {}", e))?;
-    let reader = BufReader::new(file);
-
-    let source = Decoder::new(reader)
-        .map_err(|e| format!("Failed to decode audio: {}", e))?;
-
-    let sink = Sink::try_new(&stream_handle)
-        .map_err(|e| format!("Failed to create sink: {}", e))?;
-
-    sink.append(source);
-
-    // Wait for playback to finish
-    sink.sleep_until_end();
-
-    PLAYING.store(false, Ordering::SeqCst);
-    Ok(())
-}
-
-/// Stop currently playing ringtone
 #[tauri::command]
 pub fn stop_ringtone() -> Result<AudioResult, String> {
-    log::info!("Stop ringtone command received");
-    stop_ringtone_internal();
+    playback_revision().fetch_add(1, Ordering::SeqCst);
     Ok(AudioResult {
         success: true,
         message: "Ringtone stopped".to_string(),
     })
-}
-
-fn stop_ringtone_internal() -> Result<(), String> {
-    PLAYING.store(false, Ordering::SeqCst);
-    Ok(())
 }

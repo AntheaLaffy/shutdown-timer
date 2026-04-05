@@ -1,52 +1,11 @@
-import { useState, useEffect } from 'react';
-import { t, languages, type Lang } from '../i18n';
-import { loadAutoStartStatus, setAutoStart } from '../settings';
+import { availableLanguages, useAppStore } from '../store/AppStore';
+import { t } from '../i18n';
 
-interface SettingsPageProps {
-  lang: Lang;
-  onLangChange: (lang: Lang) => void;
-}
+export default function SettingsPage() {
+  const { config, lang, setLanguage, setAutoStart, patchConfig } = useAppStore();
+  if (!config) return null;
 
-export default function SettingsPage({ lang, onLangChange }: SettingsPageProps) {
-  const [autoStart, setAutoStartState] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [toggling, setToggling] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const checkAutoStart = async () => {
-      const status = await loadAutoStartStatus();
-      if (!cancelled) {
-        setAutoStartState(status);
-        setLoading(false);
-      }
-    };
-
-    checkAutoStart();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const handleAutoStartToggle = async () => {
-    if (toggling || loading) return;
-
-    setToggling(true);
-    const newValue = !autoStart;
-    setAutoStartState(newValue); // Optimistic update
-
-    const success = await setAutoStart(newValue);
-
-    if (!success) {
-      // Revert on failure
-      setAutoStartState(!newValue);
-    }
-    setToggling(false);
-  };
-
-  const isDisabled = loading || toggling;
+  const { preferences } = config;
 
   return (
     <>
@@ -56,15 +15,13 @@ export default function SettingsPage({ lang, onLangChange }: SettingsPageProps) 
 
       <div className="page-content">
         <div className="card">
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-            {t('settings.language', lang)}
-          </h2>
+          <h2 className="section-title">{t('settings.language', lang)}</h2>
           <div className="language-selector">
-            {languages.map((language) => (
+            {availableLanguages().map((language) => (
               <button
                 key={language.code}
                 className={`lang-btn ${lang === language.code ? 'active' : ''}`}
-                onClick={() => onLangChange(language.code)}
+                onClick={() => void setLanguage(language.code)}
               >
                 {language.nativeName}
               </button>
@@ -73,28 +30,24 @@ export default function SettingsPage({ lang, onLangChange }: SettingsPageProps) 
         </div>
 
         <div className="card">
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', color: 'var(--color-text-primary)' }}>
-            {t('settings.autoStart', lang)}
-          </h2>
+          <h2 className="section-title">{t('settings.autoStart', lang)}</h2>
           <div className="toggle-group">
-            <div className="toggle-item">
-              <span className="toggle-label">
-                {t('settings.autoStart', lang)}
-              </span>
-              <div
-                className={`toggle ${autoStart ? 'active' : ''} ${toggling ? 'toggling' : ''}`}
-                onClick={isDisabled ? undefined : handleAutoStartToggle}
-                style={{ opacity: isDisabled ? 0.5 : 1 }}
-              />
-            </div>
+            <button
+              className={`toggle-item toggle-button ${preferences.autoStart ? 'active' : ''}`}
+              onClick={() => void setAutoStart(!preferences.autoStart)}
+            >
+              <span className="toggle-label">{t('settings.autoStart', lang)}</span>
+              <span className="toggle-chip">{preferences.autoStart ? t('settings.enabled', lang) : t('settings.disabled', lang)}</span>
+            </button>
+            <button
+              className={`toggle-item toggle-button ${preferences.notificationEnabled ? 'active' : ''}`}
+              onClick={() => void patchConfig({ preferences: { ...preferences, notificationEnabled: !preferences.notificationEnabled } })}
+            >
+              <span className="toggle-label">{t('settings.notifications', lang)}</span>
+              <span className="toggle-chip">{preferences.notificationEnabled ? t('settings.enabled', lang) : t('settings.disabled', lang)}</span>
+            </button>
           </div>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-tertiary)', marginTop: '12px' }}>
-            {loading
-              ? '...'
-              : autoStart
-                ? t('settings.enabled', lang)
-                : t('settings.disabled', lang)}
-          </p>
+          <p className="subtle-text">{t('settings.statusText', lang)}</p>
         </div>
       </div>
     </>

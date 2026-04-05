@@ -1,129 +1,40 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { t, type Lang } from '../i18n';
-import { getSettings, saveSettings } from '../settings';
+import { t } from '../i18n';
+import { useAppStore } from '../store/AppStore';
 
-interface TimerPageProps {
-  lang: Lang;
+function formatSeconds(totalSeconds: number): string {
+  const clamped = Math.max(0, totalSeconds);
+  const hours = Math.floor(clamped / 3600);
+  const minutes = Math.floor((clamped % 3600) / 60);
+  const seconds = clamped % 60;
+  return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
 }
 
-type TimerMode = 'countdown' | 'schedule';
-type TimerStatus = 'idle' | 'running';
+export default function TimerPage() {
+  const {
+    config,
+    lang,
+    activeTask,
+    remainingSeconds,
+    setTimerDraft,
+    startTimer,
+    cancelTimer,
+    chooseRingtone,
+    previewRingtone,
+    patchConfig,
+  } = useAppStore();
 
-interface ShutdownResult {
-  success: boolean;
-  message: string;
-}
+  if (!config) return null;
 
-export default function TimerPage({ lang }: TimerPageProps) {
-  const [mode, setMode] = useState<TimerMode>('countdown');
-  const [status, setStatus] = useState<TimerStatus>('idle');
-  const [hours, setHours] = useState(0);
-  const [minutes, setMinutes] = useState(5);
-  const [seconds, setSeconds] = useState(0);
-  const [scheduleTime, setScheduleTime] = useState('12:00');
-  const [remainingTime, setRemainingTime] = useState(0);
-  const [preventSleep, setPreventSleep] = useState(true);
-  const [minToTray, setMinToTray] = useState(true);
-  const settingsLoaded = useRef(false);
-
-  // Load persisted settings on mount (only once)
-  useEffect(() => {
-    if (settingsLoaded.current) return;
-    settingsLoaded.current = true;
-
-    const settings = getSettings();
-    setPreventSleep(settings.preventSleep);
-    setMinToTray(settings.minToTray);
-  }, []);
-
-  // Persist settings immediately when toggled
-  const handlePreventSleepToggle = useCallback(() => {
-    const newValue = !preventSleep;
-    setPreventSleep(newValue);
-    saveSettings({ preventSleep: newValue });
-  }, [preventSleep]);
-
-  const handleMinToTrayToggle = useCallback(() => {
-    const newValue = !minToTray;
-    setMinToTray(newValue);
-    saveSettings({ minToTray: newValue });
-  }, [minToTray]);
-
-  useEffect(() => {
-    let interval: number | undefined;
-
-    if (status === 'running' && mode === 'countdown') {
-      interval = window.setInterval(() => {
-        setRemainingTime((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            setStatus('idle');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [status, mode]);
-
-  const formatTime = (totalSeconds: number): string => {
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const handleStart = useCallback(async () => {
-    try {
-      if (mode === 'countdown') {
-        const totalSeconds = hours * 3600 + minutes * 60 + seconds;
-        if (totalSeconds <= 0) return;
-
-        setRemainingTime(totalSeconds);
-        setStatus('running');
-
-        if (preventSleep) {
-          await invoke('prevent_sleep');
-        }
-      } else {
-        await invoke<ShutdownResult>('schedule_shutdown', {
-          time: scheduleTime,
-          cancelOnWake: true,
-        });
-        setStatus('running');
-      }
-    } catch (error) {
-      console.error('Failed to start timer:', error);
-      setStatus('idle');
-    }
-  }, [mode, hours, minutes, seconds, scheduleTime, preventSleep]);
-
-  const handleStop = useCallback(async () => {
-    try {
-      await invoke<ShutdownResult>('cancel_shutdown');
-
-      if (preventSleep) {
-        await invoke('allow_sleep');
-      }
-
-      setStatus('idle');
-      setRemainingTime(0);
-    } catch (error) {
-      console.error('Failed to stop timer:', error);
-    }
-  }, [preventSleep]);
-
-  const displayTime =
-    mode === 'countdown'
-      ? status === 'running'
-        ? formatTime(remainingTime)
-        : formatTime(hours * 3600 + minutes * 60 + seconds)
-      : scheduleTime;
+  const { timerDraft, preferences } = config;
+  const displayTime = activeTask
+    ? formatSeconds(remainingSeconds ?? 0)
+    : timerDraft.mode === 'countdown'
+      ? formatSeconds(
+          timerDraft.countdown.hours * 3600
+          + timerDraft.countdown.minutes * 60
+          + timerDraft.countdown.seconds,
+        )
+      : timerDraft.scheduleTime;
 
   return (
     <>
@@ -132,85 +43,67 @@ export default function TimerPage({ lang }: TimerPageProps) {
       </header>
 
       <div className="page-content">
-        <div className="card">
+        <div className="card hero-card">
           <div className="timer-display">{displayTime}</div>
-
           <div className="mode-tabs">
             <button
-              className={`mode-tab ${mode === 'countdown' ? 'active' : ''}`}
-              onClick={() => setMode('countdown')}
+              className={`mode-tab ${timerDraft.mode === 'countdown' ? 'active' : ''}`}
+              onClick={() => void setTimerDraft({ mode: 'countdown' })}
             >
               {t('timer.countdown', lang)}
             </button>
             <button
-              className={`mode-tab ${mode === 'schedule' ? 'active' : ''}`}
-              onClick={() => setMode('schedule')}
+              className={`mode-tab ${timerDraft.mode === 'schedule' ? 'active' : ''}`}
+              onClick={() => void setTimerDraft({ mode: 'schedule' })}
             >
               {t('timer.schedule', lang)}
             </button>
           </div>
 
-          {mode === 'countdown' ? (
+          {timerDraft.mode === 'countdown' ? (
             <div className="timer-inputs">
-              <div className="timer-input-group">
-                <input
-                  type="number"
-                  className="timer-input"
-                  value={hours.toString().padStart(2, '0')}
-                  onChange={(e) => setHours(Math.max(0, parseInt(e.target.value) || 0))}
-                  min="0"
-                  max="99"
-                  disabled={status === 'running'}
-                />
-                <span className="timer-input-label">{t('timer.hours', lang)}</span>
-              </div>
-              <span className="timer-separator">:</span>
-              <div className="timer-input-group">
-                <input
-                  type="number"
-                  className="timer-input"
-                  value={minutes.toString().padStart(2, '0')}
-                  onChange={(e) => setMinutes(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
-                  min="0"
-                  max="59"
-                  disabled={status === 'running'}
-                />
-                <span className="timer-input-label">{t('timer.minutes', lang)}</span>
-              </div>
-              <span className="timer-separator">:</span>
-              <div className="timer-input-group">
-                <input
-                  type="number"
-                  className="timer-input"
-                  value={seconds.toString().padStart(2, '0')}
-                  onChange={(e) => setSeconds(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
-                  min="0"
-                  max="59"
-                  disabled={status === 'running'}
-                />
-                <span className="timer-input-label">{t('timer.seconds', lang)}</span>
-              </div>
+              {(['hours', 'minutes', 'seconds'] as const).map((key) => (
+                <div key={key} className="timer-input-group">
+                  <input
+                    type="number"
+                    className="timer-input"
+                    value={timerDraft.countdown[key]}
+                    min={0}
+                    max={key === 'hours' ? 99 : 59}
+                    disabled={!!activeTask}
+                    onChange={(event) => {
+                      const numeric = Math.max(0, Number(event.target.value || 0));
+                      void setTimerDraft({
+                        countdown: {
+                          ...timerDraft.countdown,
+                          [key]: key === 'hours' ? numeric : Math.min(59, numeric),
+                        },
+                      });
+                    }}
+                  />
+                  <span className="timer-input-label">{t(`timer.${key}` as never, lang)}</span>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="timer-inputs">
               <input
                 type="time"
-                className="timer-input"
-                value={scheduleTime}
-                onChange={(e) => setScheduleTime(e.target.value)}
-                disabled={status === 'running'}
-                style={{ width: '160px', height: '60px', fontSize: '1.5rem' }}
+                className="timer-input schedule-input"
+                value={timerDraft.scheduleTime}
+                disabled={!!activeTask}
+                onChange={(event) => void setTimerDraft({ scheduleTime: event.target.value })}
               />
             </div>
           )}
 
-          <div style={{ textAlign: 'center', marginTop: '24px' }}>
-            {status === 'idle' ? (
-              <button className="btn btn-primary" onClick={handleStart}>
-                {mode === 'countdown' ? t('timer.start', lang) : t('timer.setSchedule', lang)}
+          <div className="cta-row">
+            {!activeTask ? (
+              <button className="btn btn-primary" onClick={() => void startTimer()}>
+                {timerDraft.mode === 'countdown' ? t('timer.start', lang) : t('timer.setSchedule', lang)}
               </button>
             ) : (
-              <button className="btn btn-danger" onClick={handleStop}>
+              <button className="btn btn-danger" onClick={() => void cancelTimer()}>
                 {t('timer.stop', lang)}
               </button>
             )}
@@ -220,34 +113,66 @@ export default function TimerPage({ lang }: TimerPageProps) {
             <div className="status-item">
               <span className="status-label">{t('timer.status', lang)}</span>
               <span className="status-value">
-                {status === 'idle' ? t('timer.idle', lang) : t('timer.running', lang)}
+                {activeTask ? t('timer.running', lang) : t('timer.idle', lang)}
               </span>
             </div>
             <div className="status-item">
               <span className="status-label">{t('timer.mode', lang)}</span>
               <span className="status-value">
-                {mode === 'countdown' ? t('timer.countdown', lang) : t('timer.schedule', lang)}
+                {timerDraft.mode === 'countdown' ? t('timer.countdown', lang) : t('timer.schedule', lang)}
               </span>
             </div>
+            {activeTask && (
+              <div className="status-item">
+                <span className="status-label">{t('timer.target', lang)}</span>
+                <span className="status-value">{new Date(activeTask.targetAtIso).toLocaleString()}</span>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="card">
+          <div className="field-row">
+            <label className="field-label">{t('timer.ringtone', lang)}</label>
+            <div className="inline-actions">
+              <button className="btn btn-secondary" onClick={() => void chooseRingtone()}>
+                {t('timer.selectFile', lang)}
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => void previewRingtone()}
+                disabled={!preferences.ringtonePath}
+              >
+                {t('timer.previewRingtone', lang)}
+              </button>
+            </div>
+          </div>
+          <div className="subtle-text">
+            {preferences.ringtonePath || t('timer.noRingtone', lang)}
+          </div>
+
           <div className="toggle-group">
-            <div className="toggle-item">
+            <button
+              className={`toggle-item toggle-button ${preferences.preventSleep ? 'active' : ''}`}
+              onClick={() => void patchConfig({ preferences: { ...preferences, preventSleep: !preferences.preventSleep } })}
+            >
               <span className="toggle-label">{t('timer.preventSleep', lang)}</span>
-              <div
-                className={`toggle ${preventSleep ? 'active' : ''}`}
-                onClick={handlePreventSleepToggle}
-              />
-            </div>
-            <div className="toggle-item">
+              <span className="toggle-chip">{preferences.preventSleep ? t('settings.enabled', lang) : t('settings.disabled', lang)}</span>
+            </button>
+            <button
+              className={`toggle-item toggle-button ${preferences.minToTray ? 'active' : ''}`}
+              onClick={() => void patchConfig({ preferences: { ...preferences, minToTray: !preferences.minToTray } })}
+            >
               <span className="toggle-label">{t('timer.minToTray', lang)}</span>
-              <div
-                className={`toggle ${minToTray ? 'active' : ''}`}
-                onClick={handleMinToTrayToggle}
-              />
-            </div>
+              <span className="toggle-chip">{preferences.minToTray ? t('settings.enabled', lang) : t('settings.disabled', lang)}</span>
+            </button>
+            <button
+              className={`toggle-item toggle-button ${preferences.notificationEnabled ? 'active' : ''}`}
+              onClick={() => void patchConfig({ preferences: { ...preferences, notificationEnabled: !preferences.notificationEnabled } })}
+            >
+              <span className="toggle-label">{t('timer.notifyBeforeShutdown', lang)}</span>
+              <span className="toggle-chip">{preferences.notificationEnabled ? t('settings.enabled', lang) : t('settings.disabled', lang)}</span>
+            </button>
           </div>
         </div>
       </div>
