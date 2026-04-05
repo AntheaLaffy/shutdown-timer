@@ -85,9 +85,7 @@ export default function SettingsPage({ lang, onLangChange }: SettingsPageProps) 
                 className={`toggle ${autoStart ? 'active' : ''} ${toggling ? 'toggling' : ''}`}
                 onClick={isDisabled ? undefined : handleAutoStartToggle}
                 style={{ opacity: isDisabled ? 0.5 : 1 }}
-              >
-                {toggling && <span className="toggle-spinner" />}
-              </div>
+              />
             </div>
           </div>
           <p style={{ fontSize: '0.85rem', color: 'var(--color-text-tertiary)', marginTop: '12px' }}>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { t, type Lang } from '../i18n';
 import { getSettings, saveSettings } from '../settings';
@@ -25,18 +25,30 @@ export default function TimerPage({ lang }: TimerPageProps) {
   const [remainingTime, setRemainingTime] = useState(0);
   const [preventSleep, setPreventSleep] = useState(true);
   const [minToTray, setMinToTray] = useState(true);
+  const settingsLoaded = useRef(false);
 
-  // Load persisted settings on mount
+  // Load persisted settings on mount (only once)
   useEffect(() => {
+    if (settingsLoaded.current) return;
+    settingsLoaded.current = true;
+
     const settings = getSettings();
     setPreventSleep(settings.preventSleep);
     setMinToTray(settings.minToTray);
   }, []);
 
-  // Persist settings when they change
-  useEffect(() => {
-    saveSettings({ preventSleep, minToTray });
-  }, [preventSleep, minToTray]);
+  // Persist settings immediately when toggled
+  const handlePreventSleepToggle = useCallback(() => {
+    const newValue = !preventSleep;
+    setPreventSleep(newValue);
+    saveSettings({ preventSleep: newValue });
+  }, [preventSleep]);
+
+  const handleMinToTrayToggle = useCallback(() => {
+    const newValue = !minToTray;
+    setMinToTray(newValue);
+    saveSettings({ minToTray: newValue });
+  }, [minToTray]);
 
   useEffect(() => {
     let interval: number | undefined;
@@ -226,14 +238,14 @@ export default function TimerPage({ lang }: TimerPageProps) {
               <span className="toggle-label">{t('timer.preventSleep', lang)}</span>
               <div
                 className={`toggle ${preventSleep ? 'active' : ''}`}
-                onClick={() => setPreventSleep(!preventSleep)}
+                onClick={handlePreventSleepToggle}
               />
             </div>
             <div className="toggle-item">
               <span className="toggle-label">{t('timer.minToTray', lang)}</span>
               <div
                 className={`toggle ${minToTray ? 'active' : ''}`}
-                onClick={() => setMinToTray(!minToTray)}
+                onClick={handleMinToTrayToggle}
               />
             </div>
           </div>
