@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { t, languages, type Lang } from '../i18n';
+import { loadAutoStartStatus, setAutoStart } from '../settings';
 
 interface SettingsPageProps {
   lang: Lang;
@@ -8,36 +8,45 @@ interface SettingsPageProps {
 }
 
 export default function SettingsPage({ lang, onLangChange }: SettingsPageProps) {
-  const [autoStart, setAutoStart] = useState(false);
+  const [autoStart, setAutoStartState] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const checkAutoStart = async () => {
-      try {
-        const enabled = await invoke<boolean>('is_auto_start_enabled');
-        setAutoStart(enabled);
-      } catch (error) {
-        console.error('Failed to check auto start status:', error);
-      } finally {
+      const status = await loadAutoStartStatus();
+      if (!cancelled) {
+        setAutoStartState(status);
         setLoading(false);
       }
     };
+
     checkAutoStart();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleAutoStartToggle = async () => {
-    try {
-      if (autoStart) {
-        await invoke('disable_auto_start');
-        setAutoStart(false);
-      } else {
-        await invoke('enable_auto_start');
-        setAutoStart(true);
-      }
-    } catch (error) {
-      console.error('Failed to toggle auto start:', error);
+    if (toggling || loading) return;
+
+    setToggling(true);
+    const newValue = !autoStart;
+    setAutoStartState(newValue); // Optimistic update
+
+    const success = await setAutoStart(newValue);
+
+    if (!success) {
+      // Revert on failure
+      setAutoStartState(!newValue);
     }
+    setToggling(false);
   };
+
+  const isDisabled = loading || toggling;
 
   return (
     <>
@@ -73,14 +82,20 @@ export default function SettingsPage({ lang, onLangChange }: SettingsPageProps) 
                 {t('settings.autoStart', lang)}
               </span>
               <div
-                className={`toggle ${autoStart ? 'active' : ''}`}
-                onClick={loading ? undefined : handleAutoStartToggle}
-                style={{ opacity: loading ? 0.5 : 1 }}
-              />
+                className={`toggle ${autoStart ? 'active' : ''} ${toggling ? 'toggling' : ''}`}
+                onClick={isDisabled ? undefined : handleAutoStartToggle}
+                style={{ opacity: isDisabled ? 0.5 : 1 }}
+              >
+                {toggling && <span className="toggle-spinner" />}
+              </div>
             </div>
           </div>
           <p style={{ fontSize: '0.85rem', color: 'var(--color-text-tertiary)', marginTop: '12px' }}>
-            {autoStart ? t('settings.enabled', lang) : t('settings.disabled', lang)}
+            {loading
+              ? '...'
+              : autoStart
+                ? t('settings.enabled', lang)
+                : t('settings.disabled', lang)}
           </p>
         </div>
       </div>

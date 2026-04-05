@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { t, type Lang } from '../i18n';
+import { getSettings, saveSettings } from '../settings';
 
 interface TimerPageProps {
   lang: Lang;
@@ -24,6 +25,18 @@ export default function TimerPage({ lang }: TimerPageProps) {
   const [remainingTime, setRemainingTime] = useState(0);
   const [preventSleep, setPreventSleep] = useState(true);
   const [minToTray, setMinToTray] = useState(true);
+
+  // Load persisted settings on mount
+  useEffect(() => {
+    const settings = getSettings();
+    setPreventSleep(settings.preventSleep);
+    setMinToTray(settings.minToTray);
+  }, []);
+
+  // Persist settings when they change
+  useEffect(() => {
+    saveSettings({ preventSleep, minToTray });
+  }, [preventSleep, minToTray]);
 
   useEffect(() => {
     let interval: number | undefined;
